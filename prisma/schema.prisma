@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                       String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId                   String  @db.ObjectId
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? @db.String
+  access_token             String? @db.String
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? @db.String
+  session_state            String?
+  refresh_token_expires_in Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId], name: "provider_providerAccountId")
+  @@unique([userId, provider], name: "userId_provider")
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                          String?
+  email                         String?   @unique
+  emailVerified                 DateTime?
+  image                         String?
+  accounts                      Account[]
+  sessions                      Session[]
+  forms                         Form[]
+  emailNotificationsEnabled     Boolean   @default(true)
+  marketingNotificationsEnabled Boolean   @default(false)
+  theme                         String    @default("light")
+  googleAuthUser                String?
+  role                          String    @default("USER")
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+  isDeactivated                 Boolean   @default(false)
+}
+
+model Form {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String?
+  fields      Json
+  colors      Json?        // Add this field to store colors separately
+  sheetId     String?
+  sheetUrl    String?
+  sheetName   String?
+  isArchived  Boolean      @default(false)
+  userId      String       @db.ObjectId
+  user        User         @relation(fields: [userId], references: [id])
+  submissions Submission[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submitButtonText String? // Existing or added for submit button text
+}
+
+model Submission {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  data      Json
+  formId    String   @db.ObjectId
+  form      Form     @relation(fields: [formId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// Add this model to the end of your schema file
+
+model SystemSettings {
+  id               String    @id @default("1") @map("_id")
+  siteTitle        String    @default("Formix")
+  primaryColor     String    @default("#16a34a")
+  secondaryColor   String    @default("#15803d")
+  accentColor      String    @default("#86efac")
+  logoUrl          String    @default("/logo.png")
+  faviconUrl       String    @default("/favicon.ico")
+  companyName      String    @default("Your Company")
+  contactEmail     String    @default("support@example.com")
+  websiteUrl       String    @default("https://example.com")
+  setupCompleted   Boolean   @default(false)
+  licenseKey       String    @default("demo-license")
+  licenseExpiresAt DateTime? 
+  maxForms         Int       @default(9999)
+  allowedDomains   String    @default("*")
+  
+  // Add these new fields for complete setup
+  databaseUrl       String    @default("")
+  googleClientId    String    @default("")
+  googleClientSecret String   @default("")
+  nextAuthSecret    String    @default("")
+  nextAuthUrl       String    @default("")
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
